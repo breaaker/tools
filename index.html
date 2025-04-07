@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <title>工具箱</title>
+    <style>
+        /* 内联关键CSS */
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --hover: #2980b9;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui;
+            line-height: 1.6;
+            margin: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        /* 新增/修改样式 */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, #34495e 100%);
+            padding: 4rem 1rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::after { /* 新增动态背景效果 */
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.1) 50%);
+            transform: rotate(30deg);
+            animation: shine 20s infinite linear;
+        }
+
+        .tool-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            padding: 2rem 5%;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .category {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .category:hover {
+            transform: translateY(-5px);
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-50%) rotate(30deg); }
+            100% { transform: translateX(50%) rotate(30deg); }
+        }
+        /* 工具卡片升级 */
+        .tool-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-left: 4px solid var(--secondary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tool-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--secondary) 0%, var(--hover) 100%);
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.8rem 1.5rem;
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--hover) 100%);
+            color: white !important;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(52,152,219,0.3);
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52,152,219,0.4);
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            margin: 0 0 1rem;
+        }
+
+        h2 {
+            color: var(--primary);
+            font-size: 1.8rem;
+            margin: 0 0 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--secondary);
+        }
+        @media (max-width: 768px) {
+            .tool-container {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                padding: 1rem;
+            }
+            
+            .category {
+                padding: 1.5rem;
+                margin: 0 0 1rem;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .button {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .tool-card {
+                margin: 1rem 0;
+            }
+        }
+        /* 添加动态光效 */
+        .tool-card {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tool-card::after {
+            content: "";
+            position: absolute;
+            background: radial-gradient(circle at var(--x) var(--y), 
+                rgba(255,255,255,0.3) 0%, 
+                rgba(255,255,255,0) 70%);
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<script>
+    // 卡片交互动画
+    document.querySelectorAll('.tool-card').forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            card.style.setProperty('--x', `${x}px`);
+            card.style.setProperty('--y', `${y}px`);
+        });
+    });
+</script>
+<body>
+    <header class="hero">
+        <h1>🛠️ 工具箱</h1>
+    </header>
+
+    <main class="tool-container">
+        <section class="category">
+            <h2>文字</h2>
+            <div class="tool-card">
+                <h3>文本编辑器</h3>
+                <p>一个简单的文本编辑器，支持基本的文本操作。</p>
+                <a href="text.html" class="button">使用</a>
+            </div>
+            <h2>图片</h2>
+            <div class="tool-card">
+                <h3>原尺寸拼图生成器</h3>
+                <p>将若干同尺寸的图片拼到一块</p>
+                <a href="pintu.html" class="button">使用</a>
+            </div>
+            <div class="tool-card">
+                <h3>图片标注序号</h3>
+                <p>给图片添加序号</p>
+                <a href="label.html" class="button">使用</a>
+        </section>
+
+    </main>
+</body>
+</html>

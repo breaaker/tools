@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>图片标号工具</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #6c5ce7;
+            --success-color: #00b894;
+            --background: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background: var(--background);
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            padding: 2rem;
+            transition: 0.3s ease;
+        }
+
+        .config-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .config-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .config-item label {
+            margin-bottom: 0.5rem;
+            color: #636e72;
+            font-weight: 500;
+        }
+
+        input[type="number"], 
+        select,
+        input[type="text"] {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #downloadBtn {
+            background: var(--success-color);
+            display: none;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .preview-area {
+            border: 2px dashed #e0e0e0;
+            border-radius: 12px;
+            max-height: 400px;
+            overflow: auto;
+            position: relative;
+            background: white;
+        }
+
+        #canvas {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+        :root {
+            --border-color: #999;
+            --preview-border: 2px solid var(--border-color);
+        }
+
+        .container {
+            border: 1px solid var(--border-color); /* 增加容器边框 */
+        }
+
+        .preview-area {
+            border: var(--preview-border);
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.1); /* 添加内阴影 */
+        }
+
+        #canvas {
+            image-rendering: -webkit-optimize-contrast; /* 边缘锐化 */
+            image-rendering: crisp-edges;
+        }
+
+        /* 增强配置项边框 */
+        input[type="number"],
+        input[type="text"] {
+            border: 2px solid #ccc;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 4px rgba(74,144,226,0.3);
+        }
+
+        /* 新增分隔线 */
+        .config-panel {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .container.dragover {
+            box-shadow: 0 0 0 3px var(--primary-color);
+            background: rgba(74, 144, 226, 0.1);
+        }
+    </style>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-tag"></i> 图片标号工具</h1>
+        
+        <div class="config-panel">
+            <div class="config-item">
+                <label><i class="fas fa-font"></i> 标号文字</label>
+                <input type="text" id="labelInput" placeholder="输入标号" value="a">
+            </div>
+            <div class="config-item">
+                <label><i class="fas fa-arrows-alt"></i> X坐标</label>
+                <input type="number" id="posX" value="50" min="0" step="1">
+            </div>
+            <div class="config-item">
+                <label><i class="fas fa-arrows-alt-v"></i> Y坐标</label>
+                <input type="number" id="posY" value="50" min="0" step="1">
+            </div>
+            <div class="config-item">
+                <label><i class="fas fa-text-height"></i> 字体大小</label>
+                <input type="number" id="fontSize" value="48" min="12" max="120" step="4">
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button onclick="document.getElementById('imageInput').click()">
+                <i class="fas fa-folder-open"></i> 选择文件
+            </button>
+            <input type="file" id="imageInput" accept="image/*" hidden>
+            
+            <button onclick="processImage()">
+                <i class="fas fa-magic"></i> 实时预览
+            </button>
+            
+            <button id="downloadBtn" onclick="downloadImage()">
+                <i class="fas fa-download"></i> 下载高清图片
+            </button>
+        </div>
+
+        <div class="preview-area">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+
+<script>
+let currentImage = null;
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// 配置参数
+const config = {
+    label: 'a',
+    posX: 50,
+    posY: 50,
+    fontSize: 48
+};
+
+// 输入监听
+document.getElementById('labelInput').addEventListener('input', function() {
+    config.label = this.value.toLowerCase();
+    if(currentImage) processImage();
+});
+
+document.querySelectorAll('#posX, #posY, #fontSize').forEach(input => {
+    input.addEventListener('input', function() {
+        config[this.id] = Number(this.value);
+        if(currentImage) processImage();
+    });
+});
+const container = document.querySelector('.container');
+
+// 拖拽事件监听
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    container.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    container.addEventListener(eventName, highlight, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    container.addEventListener(eventName, unhighlight, false);
+});
+
+function highlight(e) {
+    container.classList.add('dragover');
+}
+
+function unhighlight(e) {
+    container.classList.remove('dragover');
+}
+
+container.addEventListener('drop', handleDrop, false);
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if(files.length > 0) {
+        loadImage(files[0]);
+    }
+}
+
+// 文件处理
+document.getElementById('imageInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if(file) loadImage(file);
+});
+
+function loadImage(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+        currentImage = new Image();
+        currentImage.onload = () => {
+            // 添加锐化处理
+            canvas.width = currentImage.naturalWidth;
+            canvas.height = currentImage.naturalHeight;
+            ctx.imageSmoothingEnabled = false; // 禁用抗锯齿
+            ctx.drawImage(currentImage, 0, 0);
+            
+            canvas.style.maxWidth = '600px';
+            canvas.style.width = '100%'; // 保持自适应
+        };
+        currentImage.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function processImage() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(currentImage, 0, 0);
+    
+    // 动态计算框体大小
+    const text = `(${config.label})`;
+    ctx.font = `bold ${config.fontSize}px "Times New Roman"`;
+    const metrics = ctx.measureText(text);
+    const boxWidth = metrics.width + 40;
+    const boxHeight = config.fontSize * 1.8;
+
+    // 绘制标号
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.fillRect(config.posX, config.posY, boxWidth, boxHeight);
+    ctx.fillStyle = '#000000'; // 设置标号颜色为纯黑
+
+    ctx.textBaseline = 'top';
+    ctx.fillText(text, 
+        config.posX + 20, 
+        config.posY + (boxHeight - config.fontSize)/2
+    );
+
+    document.getElementById('downloadBtn').style.display = 'inline-block';
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(config.posX, config.posY, boxWidth, boxHeight);
+}
+
+function downloadImage() {
+    // 创建临时全尺寸画布
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = currentImage.width;
+    tempCanvas.height = currentImage.height;
+    
+    // 重新绘制高清版本
+    tempCtx.drawImage(currentImage, 0, 0);
+    const text = `(${config.label})`;
+    tempCtx.font = `bold ${config.fontSize}px "Times New Roman"`;
+    const metrics = tempCtx.measureText(text);
+    const boxWidth = metrics.width + 40;
+    const boxHeight = config.fontSize * 1.8;
+    
+    tempCtx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    tempCtx.fillRect(config.posX, config.posY, boxWidth, boxHeight);
+    tempCtx.fillStyle = '#000000'; // 设置标号颜色为纯黑
+    tempCtx.fillText(text, 
+        config.posX + 20, 
+        config.posY + (boxHeight - config.fontSize)/2
+    );
+
+    // 生成下载链接
+    const link = document.createElement('a');
+    link.download = `labeled_${config.label}.png`;
+    link.href = tempCanvas.toDataURL('image/png');
+    link.click();
+    
+    // 下载反馈
+    const downloadBtn = document.getElementById('downloadBtn');
+    const originalText = downloadBtn.innerHTML;
+    downloadBtn.innerHTML = '<i class="fas fa-check"></i> 下载成功！';
+    setTimeout(() => {
+        downloadBtn.innerHTML = originalText;
+    }, 2000);
+}
+
+// 在页面加载时读取存储
+window.addEventListener('DOMContentLoaded', () => {
+    const savedData = localStorage.getItem('imageLabelConfig');
+    if(savedData) {
+        try {
+            const config = JSON.parse(savedData);
+            // 恢复参数到输入框
+            document.getElementById('labelInput').value = config.label;
+            document.getElementById('posX').value = config.posX;
+            document.getElementById('posY').value = config.posY;
+            document.getElementById('fontSize').value = config.fontSize;
+        } catch(e) {
+            console.log('配置读取失败');
+        }
+    }
+});
+
+// 创建自动保存函数
+function autoSave() {
+    const config = {
+        label: document.getElementById('labelInput').value,
+        posX: Number(document.getElementById('posX').value),
+        posY: Number(document.getElementById('posY').value),
+        fontSize: Number(document.getElementById('fontSize').value)
+    };
+    localStorage.setItem('imageLabelConfig', JSON.stringify(config));
+}
+
+// 为所有输入框绑定事件
+document.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', autoSave);
+});
+
+// 页面关闭前自动保存
+window.addEventListener('beforeunload', autoSave);
+</script>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>原尺寸拼图生成器</title>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .grid-container {
+            display: grid;
+            gap: 5px;
+            margin: 20px 0;
+            background: #fff;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        .grid-item {
+            background: #f5f5f5;
+            position: relative;
+            overflow: hidden;
+            min-width: 100px;
+            min-height: 100px;
+        }
+        .preview-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            cursor: pointer;
+        }
+        .upload-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-size: 12px;
+        }
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 30px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <input type="number" id="rows" placeholder="行数" min="1" value="3">
+            <input type="number" id="cols" placeholder="列数" min="1" value="3">
+            <button onclick="createGrid()">创建网格</button>
+            <input type="text" id="filename" placeholder="输出文件名" value="output.png">
+        </div>
+        
+        <div id="gridArea" class="grid-container"></div>
+        
+        <button onclick="combineImages()" style="width: 100%">拼图并保存</button>
+    </div>
+
+    <script>
+        let gridData = [];
+        let tileBaseSize = 100; // 展示区域基准尺寸
+
+        function createGrid() {
+            const rows = parseInt(document.getElementById('rows').value) || 3;
+            const cols = parseInt(document.getElementById('cols').value) || 3;
+            const container = document.getElementById('gridArea');
+            
+            container.innerHTML = '';
+            gridData = new Array(rows * cols).fill(null);
+            
+            // 动态计算容器尺寸（参考网页8布局方案）
+            container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            container.style.gap = '5px';
+            
+            for(let i = 0; i < rows * cols; i++) {
+                container.appendChild(createTileElement());
+            }
+        }
+
+        function createTileElement() {
+            const div = document.createElement('div');
+            div.className = 'grid-item';
+            div.innerHTML = `<div class="upload-hint">点击/拖入图片</div>`;
+            
+            div.onclick = () => handleTileClick(div);
+            initDragEvents(div);
+            
+            return div;
+        }
+
+        function initDragEvents(element) {
+            element.ondragover = e => {
+                e.preventDefault();
+                element.style.background = '#f0f8ff';
+            };
+            element.ondragleave = () => element.style.background = '';
+            element.ondrop = e => handleDrop(e, element);
+        }
+
+        function handleTileClick(element) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = e => handleFileSelect(e, element);
+            input.click();
+        }
+
+        function handleDrop(e, element) {
+            e.preventDefault();
+            element.style.background = '';
+            handleFileSelect(e, element);
+        }
+
+        function handleFileSelect(event, element) {
+            const file = event.dataTransfer?.files[0] || event.target.files[0];
+            if (!file?.type.startsWith('image/')) return;
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    // 存储原始尺寸（关键修改）
+                    const index = Array.from(element.parentNode.children).indexOf(element);
+                    gridData[index] = {
+                        img: img,
+                        width: img.naturalWidth,
+                        height: img.naturalHeight
+                    };
+                    updateTilePreview(element, img);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateTilePreview(element, img) {
+            element.innerHTML = `<img class="preview-img" src="${img.src}">`;
+        }
+
+        async function combineImages() {
+            const rows = parseInt(document.getElementById('rows').value);
+            const cols = parseInt(document.getElementById('cols').value);
+            
+            // 尺寸一致性校验（参考网页6验证逻辑）
+            const validData = gridData.filter(item => item);
+            if(validData.length !== rows * cols) {
+                alert('请填充所有拼图块！');
+                return;
+            }
+            
+            const firstTile = validData[0];
+            if(validData.some(t => t.width !== firstTile.width || t.height !== firstTile.height)) {
+                alert('所有图片必须保持相同尺寸！');
+                return;
+            }
+
+            // 创建画布（根据原始尺寸）
+            const canvas = document.createElement('canvas');
+            canvas.width = firstTile.width * cols;
+            canvas.height = firstTile.height * rows;
+            const ctx = canvas.getContext('2d');
+
+            // 绘制逻辑（参考网页8拼接方案）
+            gridData.forEach((tile, index) => {
+                if(!tile) return;
+                const x = (index % cols) * tile.width;
+                const y = Math.floor(index / cols) * tile.height;
+                ctx.drawImage(tile.img, x, y, tile.width, tile.height);
+            });
+
+            // 触发下载
+            const link = document.createElement('a');
+            link.download = document.getElementById('filename').value || 'output.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // 初始化默认网格
+        createGrid();
+    </script>
+</body>
+</html>
